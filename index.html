@@ -1150,7 +1150,9 @@
         transferred: 0,
         lastCheck: 0
       },
-      dayStartReal: 0
+      dayStartReal: 0,
+      // NOVO: Controlar o tempo decorrido manualmente
+      elapsedSimMinutes: 0
     };
 
     // Inicialização do jogo
@@ -1236,6 +1238,7 @@
       gameState.transferredCalls.clear();
       gameState.callPerformance.attended = 0;
       gameState.callPerformance.transferred = 0;
+      gameState.elapsedSimMinutes = 0; // Resetar tempo decorrido
       
       // Adicionar jogador à sala de suporte
       const supportDesks = document.getElementById('supportDesks');
@@ -1599,6 +1602,7 @@
       gameState.transferredCalls.clear();
       gameState.callPerformance.attended = 0;
       gameState.callPerformance.transferred = 0;
+      gameState.elapsedSimMinutes = 0; // Resetar tempo decorrido
       
       // Resetar conquistas
       achievements.forEach(ach => ach.unlocked = false);
@@ -1628,18 +1632,21 @@
       addToLog("Jogo reiniciado. Preparado para começar!");
     }
 
-    // Atualizar simulação - CORREÇÃO COMPLETA DO SISTEMA DE TEMPO
+    // Atualizar simulação - SISTEMA CORRIGIDO
     function updateSimulation() {
       if (!gameState.running) return;
       
       const now = Date.now();
       const elapsedRealMs = now - gameState.simStartReal;
-      const elapsedSimMinutes = elapsedRealMs / gameState.simMsPerMin;
       
-      // Atualizar horário
+      // Atualizar tempo decorrido manualmente para evitar problemas de precisão
+      gameState.elapsedSimMinutes += (1000 / gameState.gameSpeed) / gameState.simMsPerMin;
+      
+      // Atualizar horário baseado no tempo decorrido
       const startHour = 8; // 08:00
-      const currentHour = startHour + Math.floor(elapsedSimMinutes / 60);
-      const currentMinute = Math.floor(elapsedSimMinutes % 60);
+      const totalMinutes = gameState.elapsedSimMinutes;
+      const currentHour = startHour + Math.floor(totalMinutes / 60);
+      const currentMinute = Math.floor(totalMinutes % 60);
       
       gameState.time = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
       
@@ -1700,7 +1707,7 @@
       document.getElementById('lunchModal').style.display = 'flex';
     }
 
-    // CORREÇÃO 1: Selecionar opção de almoço (AGORA PULA PARA 13:00)
+    // CORREÇÃO 1: Selecionar opção de almoço (AGORA PULA CORRETAMENTE PARA 13:00)
     function selectLunchOption(option) {
       document.getElementById('lunchModal').style.display = 'none';
       
@@ -1732,10 +1739,10 @@
       gameState.lunchSelected = true;
       gameState.lunchActive = false;
       
-      // CORREÇÃO 1: Pular para 13:00 (avançar 5 horas no tempo)
-      const advanceHours = 5;
-      const advanceMs = advanceHours * 60 * gameState.simMsPerMin;
-      gameState.simStartReal = Date.now() - advanceMs;
+      // CORREÇÃO CRÍTICA: Pular para 13:00 corretamente
+      // 13:00 = 5 horas após 08:00 (8->13 = 5 horas)
+      // 5 horas = 300 minutos
+      gameState.elapsedSimMinutes = 300; // Define diretamente para 13:00
       
       // Adicionar ao log
       addToLog(`🍽️ ${message}`);
@@ -1805,6 +1812,8 @@
         gameState.callPerformance.lastCheck = Date.now();
       }, 30000 / gameState.gameSpeed);
     }
+
+    // ... (restante das funções permanecem iguais) ...
 
     // Iniciar geração de chamadas
     function startCallGeneration() {
@@ -2813,6 +2822,7 @@
       // Resetar contadores de desempenho
       gameState.callPerformance.attended = 0;
       gameState.callPerformance.transferred = 0;
+      gameState.elapsedSimMinutes = 0; // Resetar tempo decorrido
       
       // Verificar se atingiu a meta
       const goalReached = gameState.calls.answered >= gameState.calls.goal;
